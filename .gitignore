@@ -1,0 +1,6 @@
+/.venv
+/kmeans_model.pkl
+/scaler.pkl
+/tiktok_digital_marketing_data.csv
+/tiktok_with_clusters.csv
+/__pycache__
