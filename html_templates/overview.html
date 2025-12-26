@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview - TikTok Dashboard</title>
+    <style>
+        .overview-container {
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .cluster-insights {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="overview-container">
+        <h2>📊 Overview Dashboard</h2>
+        <div class="stats-grid" id="stats-container">
+            <!-- Stats akan diisi oleh JavaScript -->
+        </div>
+        <div class="cluster-insights">
+            <h3>Cluster Insights</h3>
+            <div id="insights-container"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Fungsi untuk update data dari Streamlit
+        function updateOverviewData(data) {
+            const statsContainer = document.getElementById('stats-container');
+            const insightsContainer = document.getElementById('insights-container');
+            
+            if (data && data.clusters) {
+                // Update stats
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <h4>Total Clusters</h4>
+                        <p style="font-size: 24px; color: #3B82F6;">${data.k_value}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Total Content</h4>
+                        <p style="font-size: 24px; color: #10B981;">${data.total_content.toLocaleString()}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Silhouette Score</h4>
+                        <p style="font-size: 24px; color: #F59E0B;">${data.silhouette.toFixed(3)}</p>
+                    </div>
+                `;
+                
+                // Update insights
+                let insightsHTML = '<div class="insights-grid">';
+                data.clusters.forEach(cluster => {
+                    insightsHTML += `
+                        <div class="insight-card" style="
+                            border-left: 4px solid ${cluster.color};
+                            padding: 10px;
+                            margin: 10px 0;
+                            background: ${cluster.color}15;
+                        ">
+                            <strong>Cluster ${cluster.id}: ${cluster.category}</strong><br>
+                            <small>${cluster.description}</small><br>
+                            <span>${cluster.count} content (${cluster.percentage}%)</span>
+                        </div>
+                    `;
+                });
+                insightsHTML += '</div>';
+                insightsContainer.innerHTML = insightsHTML;
+            }
+        }
+        
+        // Listen for messages from Streamlit
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'overview_data') {
+                updateOverviewData(event.data.data);
+            }
+        });
+    </script>
+</body>
+</html>
