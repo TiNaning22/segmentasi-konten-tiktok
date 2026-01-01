@@ -25,162 +25,306 @@ st.set_page_config(
 def load_css():
     st.markdown("""
     <style>
-        /* Background utama - F3F7FF */
+        /* ===== GLOBAL STYLES ===== */
         .stApp {
             background-color: #F3F7FF;
-            background-image: none !important;
         }
         
-        /* Hide sidebar */
-        section[data-testid="stSidebar"] {
+        /* Hide unnecessary elements */
+        section[data-testid="stSidebar"],
+        header[data-testid="stHeader"],
+        #MainMenu,
+        footer {
             display: none !important;
         }
         
-        /* Hide default header/footer */
-        header[data-testid="stHeader"] {
-            display: none !important;
-        }
-        
-        /* Main content container */
+        /* Main container */
         .main .block-container {
-            padding-top: 1rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
+            padding: 1.5rem 2rem 3rem;
             max-width: 100% !important;
         }
         
-        /* Card styling - putih tanpa border */
+        /* ===== CARD SYSTEM ===== */
         .custom-card {
             background-color: #FFFFFF;
             border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            border: none !important;
+            border: 1px solid #E2E8F0;
+            transition: all 0.3s ease;
         }
         
-        /* Metric cards - putih tanpa border */
-        [data-testid="metric-container"] {
+        .custom-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .header-card {
             background-color: #FFFFFF;
-            border-radius: 10px;
-            padding: 1rem;
-            border: none;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #E2E8F0;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .info-item {
+            padding: 0.8rem;
+            background-color: #F8FAFC;
+            border-radius: 8px;
+            border: 1px solid #E2E8F0;
+            transition: all 0.3s ease;
+        }
+        
+        .info-item:hover {
+            background-color: #EEF2FF;
+            border-color: #C7D2FE;
+        }
+        
+        .info-label {
+            color: #64748B;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin: 0 0 0.3rem 0;
+        }
+        
+        .info-value {
+            color: #1E293B;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .info-value.success {
+            color: #10B981;
+        }
+        
+        .info-value.error {
+            color: #EF4444;
+        }
+        
+        /* ===== METRICS ===== */
+        [data-testid="metric-container"] {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 1.2rem;
+            border: 2px solid #E2E8F0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
         }
         
-        /* Metric label - warna hitam */
+        [data-testid="metric-container"]:hover {
+            border-color: #3B82F6;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        
         [data-testid="stMetricLabel"] {
-            color: #1E293B !important;
+            color: #64748B !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
         }
         
-        /* Metric value - warna hitam */
         [data-testid="stMetricValue"] {
             color: #1E293B !important;
+            font-size: 1.8rem !important;
+            font-weight: 700 !important;
         }
         
-        /* Metric delta */
         [data-testid="stMetricDelta"] {
-            color: #64748B !important;
+            font-size: 0.85rem !important;
         }
         
-        /* Headers */
+        /* ===== TYPOGRAPHY ===== */
         h1, h2, h3, h4 {
             color: #1E293B;
-            font-weight: 600;
-            margin-top: 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         
-        /* Tabs styling */
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.6rem; }
+        h3 { font-size: 1.3rem; }
+        
+        p {
+            line-height: 1.6;
+            color: #475569;
+        }
+        
+        /* ===== TABS ===== */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 1rem;
-            background-color: transparent;
-            border-bottom: 2px solid #E2E8F0;
+            gap: 0.5rem;
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #E2E8F0;
         }
         
         .stTabs [data-baseweb="tab"] {
-            background-color: transparent;
+            background: transparent;
             color: #64748B;
-            border-radius: 6px 6px 0 0;
-            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
             border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .stTabs [data-baseweb="tab"]:hover {
+            background: #F1F5F9;
+            color: #475569;
         }
         
         .stTabs [aria-selected="true"] {
-            background-color: #FFFFFF;
-            color: #3B82F6;
-            border-bottom: 3px solid #3B82F6;
+            background: #3B82F6;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
         
-        /* Button styling */
+        /* ===== BUTTONS ===== */
         .stButton > button {
             background-color: #3B82F6;
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1.5rem;
-            font-weight: 500;
+            border-radius: 10px;
+            padding: 0.6rem 1.8rem;
+            font-weight: 600;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
         
         .stButton > button:hover {
             background-color: #2563EB;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
         
-        /* Download button */
         .stDownloadButton > button {
             background-color: #10B981;
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1.5rem;
+            border-radius: 10px;
+            padding: 0.6rem 1.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
         }
         
         .stDownloadButton > button:hover {
             background-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
         
-        /* Slider styling */
-        .stSlider > div > div {
+        /* ===== INPUTS ===== */
+        .stSlider > div > div > div {
             background-color: #3B82F6;
         }
         
-        /* Selectbox/Dropdown */
-        .stSelectbox > div > div {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
+        .stSelectbox > div > div,
+        .stMultiSelect > div > div {
+            background: #FFFFFF;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            transition: all 0.3s ease;
         }
         
-        /* Dataframe styling */
+        .stSelectbox > div > div:hover,
+        .stMultiSelect > div > div:hover {
+            border-color: #3B82F6;
+        }
+        
+        /* ===== DATAFRAME ===== */
         .dataframe {
-            background-color: #FFFFFF;
-            border-radius: 8px;
+            background: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dataframe thead tr th {
+            background-color: #3B82F6;
+            color: white !important;
+            font-weight: 600;
+            padding: 12px;
+        }
+        
+        .dataframe tbody tr:hover {
+            background: #F8FAFC;
+        }
+        
+        /* ===== ALERTS ===== */
+        .stAlert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* ===== LOADING ===== */
+        .stSpinner > div {
+            border-color: #3B82F6 transparent #3B82F6 transparent !important;
+        }
+        
+        /* ===== PLOTLY CHARTS ===== */
+        .js-plotly-plot {
+            border-radius: 12px;
             overflow: hidden;
         }
         
-        /* Success, Warning, Info boxes */
-        .stAlert {
-            border-radius: 8px;
-            border: none;
-            background-color: #FFFFFF;
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
         
-        /* Hide hamburger menu */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        
-        /* Loading spinner */
-        .stSpinner > div {
-            border-color: #3B82F6 !important;
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+            border-radius: 10px;
         }
         
-        /* Responsive design */
+        ::-webkit-scrollbar-thumb {
+            background: #3B82F6;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563EB;
+        }
+        
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .main .block-container {
-                padding-left: 1rem;
-                padding-right: 1rem;
+                padding: 1rem;
             }
+            
+            .header-card {
+                padding: 1.5rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 { font-size: 1.6rem; }
+            h2 { font-size: 1.4rem; }
+            h3 { font-size: 1.2rem; }
+        }
+        
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .custom-card, [data-testid="metric-container"] {
+            animation: fadeIn 0.5s ease-out;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -217,7 +361,7 @@ def load_data():
     )
     
     # Sample if needed for performance
-    MAX_ROWS = 10000
+    MAX_ROWS = 100000
     original_size = len(df)
     if len(df) > MAX_ROWS:
         df = df.sample(n=MAX_ROWS, random_state=42).reset_index(drop=True)
@@ -309,39 +453,25 @@ def main_dashboard():
     # Load CSS
     load_css()
     
-    # ==================== HEADER CARD ====================
+    # ==================== HEADER ====================
     st.markdown("""
-    <div style='
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        border: none;
-    '>
-        <h1 style='color: #1E293B; margin: 0 0 0.5rem 0; font-size: 2rem;'>
-            TikTok Intelligence Dashboard
+    <div class='header-card'>
+        <h1 style='color: #1E293B; margin: 0 0 0.5rem 0;'>
+            📊 TikTok Intelligence Dashboard
         </h1>
         <p style='color: #64748B; font-size: 1rem; margin: 0;'>
-            Segmentasi Konten Otomatis Menggunakan K-Means
+            Segmentasi Konten Otomatis Menggunakan K-Means Clustering
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # ==================== KONTROL & INFO CARDS ====================
+    # ==================== KONTROL & INFO ====================
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Control panel card
         st.markdown("""
-        <div style='
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            border: none;
-        '>
-            <h3 style='color: #1E293B; margin: 0 0 1rem 0; font-size: 1.1rem;'>
+        <div class='custom-card'>
+            <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
                 🎯 Kontrol Clustering
             </h3>
         </div>
@@ -356,37 +486,32 @@ def main_dashboard():
         )
     
     with col2:
-        # Dataset info card
         df = load_data()
         features_cols = ['Likes', 'Shares', 'Comments', 'Views', 'TimeSpentOnContent', 'Engagement_Rate']
         
+        missing_values = df[features_cols].isnull().sum().sum()
+        
         st.markdown(f"""
-        <div style='
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            border: none;
-        '>
-            <h3 style='color: #1E293B; margin: 0 0 1rem 0; font-size: 1.1rem;'>
-                📊 Dataset Info
+        <div class='custom-card'>
+            <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
+                📊 Dataset Information
             </h3>
-            <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;'>
-                <div>
-                    <p style='color: #64748B; margin: 0; font-size: 0.85rem;'>Total Konten</p>
-                    <p style='color: #1E293B; margin: 0; font-size: 1.3rem; font-weight: 600;'>{len(df):,}</p>
+            <div class='info-grid'>
+                <div class='info-item'>
+                    <p class='info-label'>Total Konten</p>
+                    <p class='info-value'>{len(df):,}</p>
                 </div>
-                <div>
-                    <p style='color: #64748B; margin: 0; font-size: 0.85rem;'>Features</p>
-                    <p style='color: #1E293B; margin: 0; font-size: 1.3rem; font-weight: 600;'>{len(features_cols)}</p>
+                <div class='info-item'>
+                    <p class='info-label'>Features</p>
+                    <p class='info-value'>{len(features_cols)}</p>
                 </div>
-                <div>
-                    <p style='color: #64748B; margin: 0; font-size: 0.85rem;'>Missing Values</p>
-                    <p style='color: #1E293B; margin: 0; font-size: 1.3rem; font-weight: 600;'>{df[features_cols].isnull().sum().sum()}</p>
+                <div class='info-item'>
+                    <p class='info-label'>Missing Values</p>
+                    <p class='info-value {"success" if missing_values == 0 else "error"}'>{missing_values}</p>
                 </div>
-                <div>
-                    <p style='color: #64748B; margin: 0; font-size: 0.85rem;'>Engagement Rate</p>
-                    <p style='color: #10B981; margin: 0; font-size: 1.3rem; font-weight: 600;'>✓ Aktif</p>
+                <div class='info-item'>
+                    <p class='info-label'>Engagement Rate</p>
+                    <p class='info-value success'>✓ Aktif</p>
                 </div>
             </div>
         </div>
@@ -395,7 +520,6 @@ def main_dashboard():
     st.markdown("<br>", unsafe_allow_html=True)
     
     # ==================== CLUSTERING ====================
-    # Perform clustering
     with st.spinner("🔄 Melakukan clustering..."):
         try:
             result = perform_clustering(df, k_value, features_cols)
@@ -406,81 +530,45 @@ def main_dashboard():
     df_clustered = df.copy()
     df_clustered['Cluster'] = result['clusters']
     
-    # ==================== METRICS CARD ====================
+    # ==================== METRICS ====================
     st.markdown("""
-    <div style='
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        border: none;
-        margin-bottom: 1.5rem;
-    '>
-        <h3 style='color: #1E293B; margin: 0 0 1.5rem 0; font-size: 1.1rem;'>
+    <div class='custom-card'>
+        <h3 style='color: #1E293B; margin: 0 0 1.5rem 0;'>
             📈 Model Performance Metrics
         </h3>
     </div>
     """, unsafe_allow_html=True)
     
-    # Metrics dalam columns - native streamlit (sudah ada card dari CSS)
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric(
-            "Jumlah Cluster",
-            k_value,
-            help="Jumlah kelompok yang dibuat"
-        )
+        st.metric("Jumlah Cluster", k_value, help="Jumlah kelompok yang dibuat")
     
     with col2:
         silhouette = result['metrics']['silhouette']
         quality = "Excellent" if silhouette > 0.7 else "Good" if silhouette > 0.5 else "Fair" if silhouette > 0.3 else "Poor"
-        st.metric(
-            "Silhouette Score",
-            f"{silhouette:.3f}",
-            delta=quality,
-            help="Semakin tinggi semakin baik (range: -1 to 1)"
-        )
+        st.metric("Silhouette Score", f"{silhouette:.3f}", delta=quality, help="Semakin tinggi semakin baik (range: -1 to 1)")
     
     with col3:
         db_score = result['metrics']['davies_bouldin']
         quality = "Excellent" if db_score < 1 else "Good" if db_score < 2 else "Fair"
-        st.metric(
-            "Davies-Bouldin",
-            f"{db_score:.2f}",
-            delta=quality,
-            delta_color="inverse",
-            help="Semakin rendah semakin baik"
-        )
+        st.metric("Davies-Bouldin", f"{db_score:.2f}", delta=quality, delta_color="inverse", help="Semakin rendah semakin baik")
     
     with col4:
-        st.metric(
-            "Inertia",
-            f"{result['metrics']['inertia']:,.0f}",
-            help="Sum of squared distances"
-        )
+        st.metric("Inertia", f"{result['metrics']['inertia']:,.0f}", help="Sum of squared distances")
     
     with col5:
         cluster_sizes = result['metrics']['cluster_sizes']
         balance = np.std(cluster_sizes) / np.mean(cluster_sizes)
         balance_quality = "Balanced" if balance < 0.5 else "Unbalanced"
-        balance_color = "normal" if balance < 0.5 else "inverse"
-        st.metric(
-            "Cluster Balance",
-            balance_quality,
-            delta=f"σ/μ: {balance:.2f}",
-            delta_color=balance_color,
-            help="Keseimbangan distribusi cluster"
-        )
+        st.metric("Cluster Balance", balance_quality, delta=f"σ/μ: {balance:.2f}", delta_color="normal" if balance < 0.5 else "inverse")
     
     # ==================== TABS ====================
-    # Simpan data di session state untuk diakses tab
     st.session_state['df_clustered'] = df_clustered
     st.session_state['result'] = result
     st.session_state['k_value'] = k_value
     st.session_state['features_cols'] = features_cols
     
-    # Tab utama
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Overview", 
         "🔍 Visualisasi", 
@@ -505,15 +593,22 @@ def main_dashboard():
         analysis_tab.render(df_clustered, result, k_value, features_cols)
     
     # ==================== FOOTER ====================
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
     <div style='
         text-align: center;
-        padding: 1.5rem;
+        padding: 2rem 1rem;
         color: #94A3B8;
-        font-size: 13px;
+        font-size: 0.9rem;
+        margin-top: 3rem;
+        border-top: 2px solid #E2E8F0;
     '>
-        © 2024 TikTok Content Segmentation Dashboard | Built with Streamlit & Scikit-learn
+        <p style='margin: 0;'>
+            <strong>TikTok Content Segmentation Dashboard</strong> | 
+            Built with Streamlit & Scikit-learn
+        </p>
+        <p style='margin: 0.5rem 0 0 0; font-size: 0.85rem;'>
+            © 2024 | Version 2.0
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
