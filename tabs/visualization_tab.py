@@ -11,7 +11,8 @@ def render(df_clustered, result, k_value, features_cols):
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### Visualisasi 2D Cluster (PCA)")
         
-        if result['use_sample']:
+        # Perbaikan: Cek apakah sample_indices tidak None
+        if result['use_sample'] and result['sample_indices'] is not None:
             sample_idx = result['sample_indices']
             pca_df = pd.DataFrame({
                 'PC1': result['pca_result'][sample_idx, 0],
@@ -21,6 +22,7 @@ def render(df_clustered, result, k_value, features_cols):
                 'Views': df_clustered.iloc[sample_idx]['Views'].values,
             })
         else:
+            # Gunakan semua data tanpa indexing
             pca_df = pd.DataFrame({
                 'PC1': result['pca_result'][:, 0],
                 'PC2': result['pca_result'][:, 1],
@@ -51,7 +53,7 @@ def render(df_clustered, result, k_value, features_cols):
     
     with col2:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📊 Quick Stats")
+        st.markdown("#### Quick Stats")
         
         st.markdown("**Varian per Cluster:**")
         for cluster_num in sorted(df_clustered['Cluster'].unique()):
