@@ -43,7 +43,7 @@ def render(df_clustered, result, k_value, features_cols):
         
         render_categorical_analysis(df_demo, categorical_cols, k_value, is_demo=True)
     else:
-        st.success(f"✅ Ditemukan {len(categorical_cols)} kolom kategorikal: {', '.join(categorical_cols)}")
+        # st.success(f"✅ Ditemukan {len(categorical_cols)} kolom kategorikal: {', '.join(categorical_cols)}")
         render_categorical_analysis(df_clustered, categorical_cols, k_value, is_demo=False)
 
 def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
@@ -364,13 +364,7 @@ def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
     <body>
         <div class="container">
             <!-- Header -->
-            <div class="card">
-                <h3 class="section-header">👥 Profiling Kategorikal per Cluster</h3>
-                <p class="section-subtitle">
-                    Kolom kategorikal TIDAK dimasukkan ke dalam K-Means clustering, 
-                    tetapi digunakan untuk profiling dan interpretasi setelah clustering selesai.
-                </p>
-            </div>
+           
 
             <!-- Column Selector -->
             <div class="card selector-container">
@@ -382,7 +376,7 @@ def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
 
             <!-- Distribution Section -->
             <div class="card">
-                <h3 class="section-header">📊 Distribusi <span id="selectedColumnTitle"></span> per Cluster</h3>
+                <h3 class="section-header">Distribusi <span id="selectedColumnTitle"></span> per Cluster</h3>
             </div>
 
             <div class="two-column">

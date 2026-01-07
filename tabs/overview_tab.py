@@ -14,56 +14,144 @@ def json_safe(obj):
     return obj
 
 def get_cluster_insights(df, cluster_col, features_cols):
-    """Generate insights per cluster"""
+    """Generate insights per cluster with unique categories using ranking"""
     insights = []
     
     cluster_means = df.groupby(cluster_col)[features_cols].mean()
     cluster_counts = df[cluster_col].value_counts()
     
-    engagement_rates = []
-    views_list = []
-    
+    # Calculate engagement rate and views for each cluster
+    cluster_metrics = []
     for cluster_num in sorted(df[cluster_col].unique()):
         avg_metrics = cluster_means.loc[cluster_num]
         engagement_rate = avg_metrics.get('Engagement_Rate', 
             (avg_metrics['Likes'] + avg_metrics['Comments'] + avg_metrics['Shares']) / avg_metrics['Views'] if avg_metrics['Views'] > 0 else 0
         )
-        engagement_rates.append(engagement_rate)
-        views_list.append(avg_metrics['Views'])
-    
-    engagement_percentiles = pd.Series(engagement_rates).rank(pct=True)
-    views_percentiles = pd.Series(views_list).rank(pct=True)
-    
-    for idx, cluster_num in enumerate(sorted(df[cluster_col].unique())):
-        avg_metrics = cluster_means.loc[cluster_num]
-        engagement_pct = engagement_percentiles.iloc[idx]
-        views_pct = views_percentiles.iloc[idx]
         
-        if engagement_pct >= 0.75 and views_pct >= 0.75:
+        cluster_metrics.append({
+            'cluster': cluster_num,
+            'engagement': engagement_rate,
+            'views': avg_metrics['Views'],
+            'likes': avg_metrics['Likes'],
+            'comments': avg_metrics['Comments'],
+            'shares': avg_metrics['Shares']
+        })
+    
+    # Sort by engagement and views to get rankings
+    df_metrics = pd.DataFrame(cluster_metrics)
+    df_metrics['engagement_rank'] = df_metrics['engagement'].rank(ascending=False, method='min')
+    df_metrics['views_rank'] = df_metrics['views'].rank(ascending=False, method='min')
+    
+    # Calculate percentiles for reference
+    df_metrics['engagement_pct'] = df_metrics['engagement'].rank(pct=True)
+    df_metrics['views_pct'] = df_metrics['views'].rank(pct=True)
+    
+    # Assign unique categories based on combined ranking
+    # Create unique identifier for each cluster
+    assigned_categories = set()
+    
+    for idx, row in df_metrics.iterrows():
+        cluster_num = row['cluster']
+        engagement_rank = int(row['engagement_rank'])
+        views_rank = int(row['views_rank'])
+        engagement_pct = row['engagement_pct']
+        views_pct = row['views_pct']
+        
+        # Use combined score for more nuanced categorization
+        combined_score = (engagement_rank + views_rank) / 2
+        
+        # Categorize based on rank combinations (ensures uniqueness)
+        # Priority 1: Best performers
+        if engagement_rank == 1 and views_rank == 1:
             category = "Golden Content"
             color = "#10B981"
-            description = "Viral + Engagement Tinggi"
-            emoji = "🌟"
-        elif views_pct >= 0.75:
+            description = "Top Engagement + Top Views"
+            emoji = ""
+        
+        # Priority 2: Single dimension leaders
+        elif views_rank == 1 and engagement_rank > 1:
             category = "Passive Viral"
             color = "#3B82F6"
-            description = "Views Tinggi, Interaksi Rendah"
-            emoji = "👀"
-        elif engagement_pct >= 0.75:
+            description = f"Viral (#1 Views, #{engagement_rank} Engagement)"
+            emoji = ""
+        elif engagement_rank == 1 and views_rank > 1:
             category = "Conversation Starter"
             color = "#F59E0B"
-            description = "Engagement Tinggi, Reach Sedang"
-            emoji = "💬"
-        elif engagement_pct >= 0.50 and views_pct >= 0.50:
-            category = "Moderate Performer"
-            color = "#6B7280"
-            description = "Performa Rata-rata"
-            emoji = "📊"
-        else:
-            category = "Underperforming"
+            description = f"High Engagement (#1), #{views_rank} Views"
+            emoji = ""
+        
+        # Priority 3: Second place holders
+        elif views_rank == 2 and engagement_rank != 2:
+            category = "High Reach"
+            color = "#06B6D4"
+            description = f"2nd Highest Views, #{engagement_rank} Engagement"
+            emoji = ""
+        elif engagement_rank == 2 and views_rank != 2:
+            category = "Engaging Content"
+            color = "#8B5CF6"
+            description = f"2nd Best Engagement, #{views_rank} Views"
+            emoji = ""
+        
+        # Priority 4: Balanced performers
+        elif engagement_rank == 2 and views_rank == 2:
+            category = "Balanced Runner-up"
+            color = "#14B8A6"
+            description = f"2nd Place: #{engagement_rank} Eng, #{views_rank} Views"
+            emoji = ""
+        elif combined_score <= 3.0:
+            category = "Strong Performer"
+            color = "#10B981"
+            description = f"Solid: #{engagement_rank} Eng, #{views_rank} Views"
+            emoji = ""
+        
+        # Priority 5: Middle tier - use views as primary differentiator
+        elif views_rank == 3:
+            category = "Growing Audience"
+            color = "#84CC16"
+            description = f"3rd Views, #{engagement_rank} Engagement"
+            emoji = ""
+        elif engagement_rank == 3:
+            category = "Moderate Engagement"
+            color = "#F59E0B"
+            description = f"3rd Engagement, #{views_rank} Views"
+            emoji = ""
+        
+        # Priority 6: Lower performers - differentiate by specific ranks
+        elif views_rank == 4:
+            category = "Limited Reach"
+            color = "#FB923C"
+            description = f"4th Views, #{engagement_rank} Engagement"
+            emoji = ""
+        elif engagement_rank == 4:
+            category = "Low Interaction"
+            color = "#F97316"
+            description = f"4th Engagement, #{views_rank} Views"
+            emoji = ""
+        
+        # Priority 7: Bottom tier - use combination of ranks
+        elif views_rank == 5 and engagement_rank == 5:
+            category = "Needs Major Boost"
+            color = "#DC2626"
+            description = f"Lowest: #{engagement_rank} Eng, #{views_rank} Views"
+            emoji = ""
+        elif views_rank == 5:
+            category = "Minimal Reach"
             color = "#EF4444"
-            description = "Perlu Optimasi"
-            emoji = "⚠️"
+            description = f"5th Views, #{engagement_rank} Engagement"
+            emoji = ""
+        elif engagement_rank == 5:
+            category = "Minimal Interaction"
+            color = "#DC2626"
+            description = f"5th Engagement, #{views_rank} Views"
+            emoji = ""
+        
+        # Fallback: Use unique identifier based on exact rank combination
+        else:
+            # Create unique category based on rank combination
+            category = f"Tier {int(combined_score)}"
+            color = "#6B7280"
+            description = f"#{engagement_rank} Eng, #{views_rank} Views"
+            emoji = ""
         
         insights.append({
             'cluster': cluster_num,
@@ -73,20 +161,24 @@ def get_cluster_insights(df, cluster_col, features_cols):
             'emoji': emoji,
             'count': int(cluster_counts[cluster_num]),
             'percentage': float(cluster_counts[cluster_num] / len(df) * 100),
-            'avg_likes': float(avg_metrics['Likes']),
-            'avg_views': float(avg_metrics['Views']),
-            'avg_comments': float(avg_metrics['Comments']),
-            'avg_shares': float(avg_metrics['Shares']),
-            'avg_engagement': float(avg_metrics['Engagement_Rate']),
-            'engagement_rank': float(engagement_pct),
-            'views_rank': float(views_pct)
+            'avg_likes': float(row['likes']),
+            'avg_views': float(row['views']),
+            'avg_comments': float(row['comments']),
+            'avg_shares': float(row['shares']),
+            'avg_engagement': float(row['engagement']),
+            'engagement_rank': engagement_rank,
+            'views_rank': views_rank,
+            'engagement_pct': float(engagement_pct),
+            'views_pct': float(views_pct)
         })
+    
+    # Sort by cluster number
+    insights.sort(key=lambda x: x['cluster'])
     
     return insights
 
 def get_content_type_distribution(df):
     """Generate ContentType distribution analysis"""
-    # Check if ContentType column exists
     if 'ContentType' not in df.columns:
         return None
     
@@ -95,25 +187,21 @@ def get_content_type_distribution(df):
     for content_type in df['ContentType'].unique():
         ct_data = df[df['ContentType'] == content_type]
         
-        # Get cluster distribution for this content type
         cluster_dist = ct_data['Cluster'].value_counts()
         dominant_cluster = int(cluster_dist.idxmax())
         dominant_pct = float(cluster_dist.max() / len(ct_data) * 100)
         
-        # Calculate averages
         avg_likes = float(ct_data['Likes'].mean())
         avg_views = float(ct_data['Views'].mean())
         avg_comments = float(ct_data['Comments'].mean())
         avg_shares = float(ct_data['Shares'].mean())
         
-        # Get age group distribution if available
         age_group_info = "N/A"
         if 'AgeGroup' in df.columns:
             top_age = ct_data['AgeGroup'].mode()
             if len(top_age) > 0:
                 age_group_info = str(top_age.iloc[0])
         
-        # Determine performance level
         engagement_rate = (avg_likes + avg_comments + avg_shares) / avg_views if avg_views > 0 else 0
         
         if engagement_rate >= 0.05 and avg_views >= df['Views'].median():
@@ -142,7 +230,6 @@ def get_content_type_distribution(df):
             'performance_color': perf_color
         })
     
-    # Sort by count descending
     content_types.sort(key=lambda x: x['count'], reverse=True)
     
     return content_types
@@ -150,7 +237,6 @@ def get_content_type_distribution(df):
 def render(df_clustered, result, k_value, features_cols):
     """Render Overview tab with ContentType Distribution"""
     
-    # Prepare all data
     insights = get_cluster_insights(df_clustered, 'Cluster', features_cols)
     
     cluster_counts = df_clustered['Cluster'].value_counts().sort_index()
@@ -167,18 +253,15 @@ def render(df_clustered, result, k_value, features_cols):
         'metrics': {feature: cluster_means[feature].tolist() for feature in main_features}
     }
     
-    # Get ContentType distribution
     content_type_data = get_content_type_distribution(df_clustered)
     has_content_type = content_type_data is not None
     
-    # Convert to JSON
     insights_json = json.dumps(insights, default=json_safe)
     distribution_json = json.dumps(distribution_data, default=json_safe)
     bar_chart_json = json.dumps(bar_chart_data, default=json_safe)
     content_type_json = json.dumps(content_type_data, default=json_safe) if has_content_type else json.dumps(None)
     has_content_type_json = json.dumps(has_content_type)
     
-    # HTML Component (includes ContentType table rendering)
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -194,12 +277,13 @@ def render(df_clustered, result, k_value, features_cols):
             .section-subtitle {{ font-size: 0.9rem; color: #64748B; margin-bottom: 1rem; }}
             .two-column {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }}
             .chart-container {{ height: 420px; width: 100%; }}
-            .insight-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }}
+            .insight-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }}
             .insight-card {{ border-radius: 12px; padding: 1.5rem; border-left: 5px solid; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }}
             .insight-card:hover {{ transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }}
             .insight-header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }}
             .insight-cluster {{ font-size: 1.1rem; font-weight: 600; }}
             .insight-emoji {{ font-size: 1.5rem; }}
+            .rank-badge {{ display: inline-block; padding: 2px 8px; background: rgba(59, 130, 246, 0.1); color: #3B82F6; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }}
             .summary-table {{ width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 1rem; }}
             .summary-table th {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.8rem; text-align: left; font-weight: 600; }}
             .summary-table th:first-child {{ border-top-left-radius: 8px; }}
@@ -214,7 +298,7 @@ def render(df_clustered, result, k_value, features_cols):
     </head>
     <body>
         <div class="container">
-            <div class="card"><h3 class="section-header">📊 Distribusi & Performa Cluster</h3></div>
+            <div class="card"><h3 class="section-header">Distribusi & Performa Cluster</h3></div>
             
             <div class="two-column">
                 <div class="card">
@@ -228,19 +312,19 @@ def render(df_clustered, result, k_value, features_cols):
             </div>
 
             <div class="card">
-                <h3 class="section-header">🎯 Profil Cluster</h3>
-                <p class="section-subtitle">Interpretasi otomatis berdasarkan engagement dan views</p>
+                <h3 class="section-header">Profil Cluster</h3>
+                <p class="section-subtitle">Kategori unik berdasarkan ranking engagement dan views</p>
             </div>
             <div id="insightCards" class="insight-grid"></div>
 
             <div class="card">
-                <h3 class="section-header">📈 Ringkasan Metrik Detail</h3>
+                <h3 class="section-header">Ringkasan Metrik Detail</h3>
                 <div style="overflow-x: auto;"><table class="summary-table" id="summaryTable"></table></div>
             </div>
 
             <div id="contentTypeSection" style="display: none;">
                 <div class="card">
-                    <h3 class="section-header">🎬 Distribusi Content Type</h3>
+                    <h3 class="section-header">Distribusi Content Type</h3>
                     <p class="section-subtitle">Performa berdasarkan jenis konten dengan cluster dominan dan age group</p>
                     <div style="overflow-x: auto;"><table class="summary-table" id="contentTypeTable"></table></div>
                 </div>
@@ -283,8 +367,12 @@ def render(df_clustered, result, k_value, features_cols):
                             <h4 class="insight-cluster">Cluster ${{i.cluster}}</h4>
                             <span class="insight-emoji">${{i.emoji}}</span>
                         </div>
-                        <p style="font-weight: 600; color: ${{i.color}};">${{i.category}}</p>
-                        <p style="font-size: 0.85rem; color: #64748B;">${{i.description}}</p>
+                        <p style="font-weight: 600; color: ${{i.color}}; margin-bottom: 0.3rem;">${{i.category}}</p>
+                        <p style="font-size: 0.85rem; color: #64748B; margin-bottom: 0.8rem;">${{i.description}}</p>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem;">
+                            <span class="rank-badge">Eng: #${{i.engagement_rank}}</span>
+                            <span class="rank-badge">Views: #${{i.views_rank}}</span>
+                        </div>
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid ${{i.color}}30;">
                             <p><strong>${{i.count.toLocaleString('id-ID')}}</strong> konten</p>
                             <p style="font-size: 0.8rem; color: #64748B;">${{i.percentage.toFixed(1)}}% dari total</p>
@@ -295,9 +383,9 @@ def render(df_clustered, result, k_value, features_cols):
             }}
 
             function createSummaryTable() {{
-                let html = '<thead><tr><th>Cluster</th><th>Kategori</th><th>Jumlah</th><th>%</th><th>Likes</th><th>Views</th><th>Comments</th><th>Shares</th><th>Engagement</th></tr></thead><tbody>';
+                let html = '<thead><tr><th>Cluster</th><th>Kategori</th><th>Rank</th><th>Jumlah</th><th>%</th><th>Likes</th><th>Views</th><th>Comments</th><th>Shares</th><th>Engagement</th></tr></thead><tbody>';
                 insights.forEach(i => {{
-                    html += `<tr><td><strong>Cluster ${{i.cluster}}</strong></td><td>${{i.category}}</td><td>${{i.count.toLocaleString('id-ID')}}</td><td>${{i.percentage.toFixed(1)}}%</td><td>${{i.avg_likes.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_views.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_comments.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_shares.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_engagement.toFixed(4)}}</td></tr>`;
+                    html += `<tr><td><strong>Cluster ${{i.cluster}}</strong></td><td>${{i.category}}</td><td><span class="rank-badge">E:#${{i.engagement_rank}}</span> <span class="rank-badge">V:#${{i.views_rank}}</span></td><td>${{i.count.toLocaleString('id-ID')}}</td><td>${{i.percentage.toFixed(1)}}%</td><td>${{i.avg_likes.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_views.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_comments.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_shares.toLocaleString('id-ID', {{maximumFractionDigits: 0}})}}</td><td>${{i.avg_engagement.toFixed(4)}}</td></tr>`;
                 }});
                 document.getElementById('summaryTable').innerHTML = html + '</tbody>';
             }}

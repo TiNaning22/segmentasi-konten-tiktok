@@ -17,7 +17,7 @@ def load_data():
     except FileNotFoundError:
         logger.error("File dataset tidak ditemukan")
         st.error("""
-        ❌ Dataset tidak ditemukan. 
+        Dataset tidak ditemukan. 
         
         Pastikan file 'tiktok_digital_marketing_data.csv' ada di direktori yang sama.
         
@@ -47,14 +47,14 @@ def load_data():
             
             # Save demo data
             demo_data.to_csv('tiktok_demo_data.csv', index=False)
-            st.success("✅ Data demo berhasil dibuat. Silakan refresh halaman.")
+            st.success("Data demo berhasil dibuat. Silakan refresh halaman.")
             st.stop()
         
         st.stop()
     
     except Exception as e:
         logger.error(f"Error loading data: {str(e)}")
-        st.error(f"❌ Error membaca file CSV: {str(e)}")
+        st.error(f"Error membaca file CSV: {str(e)}")
         st.stop()
     
     # Validate required columns
@@ -64,7 +64,7 @@ def load_data():
     if missing_cols:
         logger.error(f"Missing required columns: {missing_cols}")
         st.error(f"""
-        ❌ Kolom yang hilang: {', '.join(missing_cols)}
+        Kolom yang hilang: {', '.join(missing_cols)}
         
         **Kolom yang dibutuhkan:**
         - Likes
@@ -91,13 +91,21 @@ def load_data():
                 df[col] = df[col].fillna(median_val)
                 logger.info(f"Kolom {col}: mengisi {df[col].isnull().sum()} values dengan median {median_val:.2f}")
         
-        st.info(f"ℹ️ Mengisi {missing_count} nilai yang hilang dengan median")
+        st.info(f"ℹMengisi {missing_count} nilai yang hilang dengan median")
     
     # Calculate engagement rate (avoid division by zero)
     df['Engagement_Rate'] = (
         (df['Likes'] + df['Comments'] + df['Shares']) / 
         df['Views'].clip(lower=1)
     )
+
+    # Handle extreme outliers in Engagement_Rate
+    q1 = df['Engagement_Rate'].quantile(0.25)
+    q3 = df['Engagement_Rate'].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - 10 * iqr
+    upper_bound = q3 + 10 * iqr
+    df['Engagement_Rate'] = df['Engagement_Rate'].clip(lower=lower_bound, upper=upper_bound)
     
     # Log statistics
     logger.info(f"Engagement Rate - Min: {df['Engagement_Rate'].min():.4f}, "
@@ -113,7 +121,7 @@ def load_data():
         logger.info(f"Dataset disampling dari {original_size:,} ke {MAX_ROWS:,} baris")
         
         st.warning(f"""
-        ⚠️ Dataset terlalu besar ({original_size:,} rows)
+        Dataset terlalu besar ({original_size:,} rows)
         
         **Aksi:** Disampling ke {MAX_ROWS:,} rows untuk performa optimal.
         

@@ -173,10 +173,12 @@ def perform_clustering(df: pd.DataFrame, n_clusters: int, features_cols: list) -
                 pca_explained = pca.explained_variance_ratio_
             else:
                 raise ValueError("Data terlalu sedikit untuk PCA")
-        except:
-            pca_result = np.random.randn(len(scaled_features), 2) * 0.1
-            pca_explained = [0.5, 0.3]
-            validation_warnings.append("PCA menggunakan data dummy")
+        except Exception as e:
+            logger.warning(f"PCA failed: {e}. Returning None for visualization")
+            pca_result = None
+            pca_explained = None
+            validation_warnings.append("PCA visualization unavailable")
+            # validation_warnings.append("PCA menggunakan data dummy")
         
         # ==================== RETURN RESULT ====================
         result = {

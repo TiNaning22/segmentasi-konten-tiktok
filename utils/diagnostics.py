@@ -7,7 +7,7 @@ def display_clustering_diagnostics(df: pd.DataFrame, result: Dict, features_cols
     """
     Tampilkan diagnostic informasi clustering
     """
-    with st.expander("🔍 Diagnostics & Warnings", expanded=False):
+    with st.expander("Diagnostics & Warnings", expanded=False):
         
         col1, col2 = st.columns(2)
         

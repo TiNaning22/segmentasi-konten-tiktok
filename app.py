@@ -44,6 +44,14 @@ st.set_page_config(
 
 # ==================== DASHBOARD UTAMA ====================
 def main_dashboard():
+    # Initialize session state
+    if 'clustering_complete' not in st.session_state:
+        st.session_state.clustering_complete = False
+    if 'df_clustered' not in st.session_state:
+        st.session_state.df_clustered = None
+    if 'result' not in st.session_state:
+        st.session_state.result = None
+        
     # Load CSS
     load_css()
     
@@ -51,7 +59,7 @@ def main_dashboard():
     st.markdown("""
     <div class='header-card'>
         <h1 style='color: #1E293B; margin: 0 0 0.5rem 0;'>
-            📊 TikTok Intelligence Dashboard
+            TikTok Intelligence Dashboard
         </h1>
         <p style='color: #64748B; font-size: 1rem; margin: 0;'>
             Segmentasi Konten Otomatis Menggunakan K-Means Clustering
@@ -66,7 +74,7 @@ def main_dashboard():
         st.markdown("""
         <div class='custom-card'>
             <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
-                🎯 Kontrol Clustering
+                Kontrol Clustering
             </h3>
         </div>
         """, unsafe_allow_html=True)
@@ -80,22 +88,22 @@ def main_dashboard():
             suggestions = suggest_optimal_clusters(df, features_cols)
         except:
             df_loaded = False
-            suggestions = {'recommended': 4, 'recommended_range': '2-8'}
+            suggestions = {'recommended': 4, 'recommended_range': '2-5'}
         
-        # K value slider with suggestions
-        default_k = suggestions.get('recommended', 4)
+        # K value slider with suggestions - MAX VALUE CHANGED TO 5
+        default_k = min(suggestions.get('recommended', 4), 5)  # Ensure default doesn't exceed max
         
         k_value = st.slider(
             "Jumlah Cluster (K):",
             min_value=2,
-            max_value=10,
+            max_value=5,  # Changed from 10 to 5
             value=default_k,
-            help=f"Disarankan: {suggestions.get('recommended_range', '2-8')}. K={default_k} berdasarkan data"
+            help=f"Disarankan: {suggestions.get('recommended_range', '2-5')}. K={default_k} berdasarkan data"
         )
         
         # Show suggestions
         if suggestions.get('warnings'):
-            with st.expander("📋 Saran & Peringatan"):
+            with st.expander("Saran & Peringatan"):
                 for warning in suggestions['warnings']:
                     st.warning(warning)
                 
@@ -115,7 +123,7 @@ def main_dashboard():
         st.markdown(f"""
         <div class='custom-card'>
             <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
-                📊 Dataset Information
+                Dataset Information
             </h3>
             <div class='info-grid'>
                 <div class='info-item'>
@@ -134,7 +142,7 @@ def main_dashboard():
                 </div>
                 <div class='info-item'>
                     <p class='info-label'>Engagement Rate</p>
-                    <p class='info-value success'>✓ Aktif</p>
+                    <p class='info-value success'>Aktif</p>
                 </div>
             </div>
         </div>
@@ -147,14 +155,14 @@ def main_dashboard():
             st.error(validation_msg)
         else:
             if validation_warnings:
-                with st.expander("ℹ️ Validation Warnings", expanded=False):
+                with st.expander("Validation Warnings", expanded=False):
                     for warning in validation_warnings[:3]:
                         st.warning(warning)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
     # ==================== CLUSTERING DENGAN ERROR HANDLING ====================
-    with st.spinner("🔄 Melakukan clustering..."):
+    with st.spinner("Melakukan clustering..."):
         progress_bar = st.progress(0)
         
         try:
@@ -166,9 +174,9 @@ def main_dashboard():
             
             if not is_valid:
                 progress_bar.progress(100)
-                st.error(f"❌ {validation_msg}")
+                st.error(f"{validation_msg}")
                 
-                with st.expander("💡 Tips perbaikan data"):
+                with st.expander("Tips perbaikan data"):
                     st.markdown("""
                     1. **Cek missing values**: Pastikan tidak ada kolom dengan >50% missing
                     2. **Cek tipe data**: Semua feature harus numerik
@@ -179,7 +187,8 @@ def main_dashboard():
                 
                 # Suggest optimal clusters
                 suggestions = suggest_optimal_clusters(df, features_cols)
-                st.info(f"**Saran:** Untuk {len(df):,} data, coba K={suggestions.get('recommended', 4)}")
+                recommended_k = min(suggestions.get('recommended', 4), 5)  # Cap at 5
+                st.info(f"Saran: Untuk {len(df):,} data, coba K={recommended_k}")
                 
                 st.stop()
             
@@ -187,7 +196,7 @@ def main_dashboard():
             
             # Tampilkan info validasi
             if validation_warnings:
-                st.warning(f"⚠️ {len(validation_warnings)} warnings ditemukan. Clustering tetap dilanjutkan.")
+                st.warning(f"{len(validation_warnings)} warnings ditemukan. Clustering tetap dilanjutkan.")
             
             progress_bar.progress(60)
             
@@ -198,21 +207,21 @@ def main_dashboard():
             
             # Cek jika clustering menghasilkan error
             if result and not result.get('success', True):
-                st.error(f"❌ Error dalam clustering: {result.get('error', 'Unknown error')}")
+                st.error(f"Error dalam clustering: {result.get('error', 'Unknown error')}")
                 
                 # Fallback: coba dengan K yang lebih kecil
                 if k_value > 2:
-                    st.warning(f"⏳ Mencoba clustering dengan K={k_value-1}...")
+                    st.warning(f"Mencoba clustering dengan K={k_value-1}...")
                     result = perform_clustering(df, k_value-1, features_cols)
                     
                     if not result.get('success', True):
-                        st.error("❌ Clustering tetap gagal. Silakan cek data Anda.")
+                        st.error("Clustering tetap gagal. Silakan cek data Anda.")
                         st.stop()
                     else:
-                        st.success(f"✅ Clustering berhasil dengan K={k_value-1}")
+                        st.success(f"Clustering berhasil dengan K={k_value-1}")
                         k_value = k_value - 1  # Update K value
                 else:
-                    st.error("❌ Tidak dapat melakukan clustering. Cek data dan coba lagi.")
+                    st.error("Tidak dapat melakukan clustering. Cek data dan coba lagi.")
                     st.stop()
             
             progress_bar.progress(100)
@@ -220,10 +229,10 @@ def main_dashboard():
         except Exception as e:
             progress_bar.progress(100)
             logger.error(f"Exception tidak terduga: {str(e)}", exc_info=True)
-            st.error(f"❌ Exception tidak terduga: {str(e)}")
+            st.error(f"Exception tidak terduga: {str(e)}")
             
             # Fallback: buat cluster dummy untuk menjaga aplikasi tetap berjalan
-            st.warning("🔄 Membuat cluster dummy untuk melanjutkan...")
+            st.warning("Membuat cluster dummy untuk melanjutkan...")
             result = {
                 'clusters': np.random.randint(0, k_value, size=len(df)),
                 'metrics': {
@@ -245,23 +254,23 @@ def main_dashboard():
     df_clustered['Cluster'] = result['clusters']
     
     # ==================== DIAGNOSTICS ====================
-    display_clustering_diagnostics(df, result, features_cols)
+    # display_clustering_diagnostics(df, result, features_cols)
     
     # ==================== METRICS DENGAN ERROR INDICATOR ====================
     st.markdown("""
     <div class='custom-card'>
         <h3 style='color: #1E293B; margin: 0 0 1.5rem 0;'>
-            📈 Model Performance Metrics
+            Model Performance Metrics
         </h3>
     </div>
     """, unsafe_allow_html=True)
     
     # Tampilkan indicator jika ada error atau fallback
     if result.get('fallback', False):
-        st.warning("⚠️ Menggunakan hasil fallback clustering. Metrics mungkin tidak akurat.")
+        st.warning("Menggunakan hasil fallback clustering. Metrics mungkin tidak akurat.")
     
     if result.get('error'):
-        st.error(f"⚠️ Clustering memiliki masalah: {result.get('error', 'Unknown error')}")
+        st.error(f"Clustering memiliki masalah: {result.get('error', 'Unknown error')}")
     
     col1, col2, col3, col4, col5 = st.columns(5)
     
@@ -360,12 +369,12 @@ def main_dashboard():
     st.session_state['k_value'] = k_value
     st.session_state['features_cols'] = features_cols
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Overview", 
-        "🔍 Visualisasi", 
-        "📋 Data & Profil",
-        "👥 Profiling Kategorikal",
-        "📈 Analisis"
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Overview", 
+        "Visualisasi", 
+        # "Data & Profil",
+        "Profiling Kategorikal",
+        "Analisis"
     ])
     
     with tab1:
@@ -374,13 +383,13 @@ def main_dashboard():
     with tab2:
         visualization_tab.render(df_clustered, result, k_value, features_cols)
     
-    with tab3:
-        data_tab.render(df_clustered, result, k_value, features_cols)
+    # with tab3:
+    #     data_tab.render(df_clustered, result, k_value, features_cols)
 
-    with tab4:
+    with tab3:
         categorical_tab.render(df_clustered, result, k_value, features_cols)
     
-    with tab5:
+    with tab4:
         analysis_tab.render(df_clustered, result, k_value, features_cols)
     
     # ==================== FOOTER ====================
@@ -395,7 +404,7 @@ def main_dashboard():
     '>
         <p style='margin: 0;'>
             <strong>TikTok Content Segmentation Dashboard</strong> | 
-            Built with Streamlit & Scikit-learn | Enhanced Error Handling v2.1
+            Built with Streamlit & Scikit-learn | Max K = 5
         </p>
         <p style='margin: 0.5rem 0 0 0; font-size: 0.85rem;'>
             © 2024 | Version 2.1 | Logs: tiktok_dashboard.log
@@ -409,7 +418,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.critical(f"Critical error in main_dashboard: {str(e)}", exc_info=True)
         st.error(f"""
-        ❌ Critical Error: {str(e)}
+        Critical Error: {str(e)}
         
         Aplikasi mengalami error yang tidak dapat dipulihkan.
         
