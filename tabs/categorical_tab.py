@@ -26,7 +26,7 @@ def render(df_clustered, result, k_value, features_cols):
         """)
         
         st.markdown("---")
-        st.markdown("#### 🎭 Contoh Profiling Kategorikal (Data Demo)")
+        st.markdown("####Contoh Profiling Kategorikal (Data Demo)")
         
         # Create demo data
         demo_data = pd.DataFrame({
@@ -382,20 +382,20 @@ def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
             <div class="two-column">
                 <!-- Bar Chart -->
                 <div class="card">
-                    <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📈 Visualisasi Persentase</h4>
+                    <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Visualisasi Persentase</h4>
                     <div id="barChart" class="chart-container"></div>
                 </div>
 
                 <!-- Heatmap -->
                 <div class="card">
-                    <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🎯 Heatmap Distribusi</h4>
+                    <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Heatmap Distribusi</h4>
                     <div id="heatmap" class="chart-container"></div>
                 </div>
             </div>
 
             <!-- Insights Section -->
             <div class="card">
-                <h3 class="section-header">🎯 Insight Otomatis per Cluster</h3>
+                <h3 class="section-header">Insight Otomatis per Cluster</h3>
                 <div id="insightCards" class="insight-grid">
                     <!-- Will be populated by JavaScript -->
                 </div>
@@ -403,7 +403,7 @@ def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
 
             <!-- Tables Section -->
             <div class="card">
-                <h3 class="section-header">📋 Tabel Detail</h3>
+                <h3 class="section-header">Tabel Detail</h3>
                 <div class="tab-container">
                     <button class="tab-button active" onclick="switchTab('percentage')">Persentase (%)</button>
                     <button class="tab-button" onclick="switchTab('count')">Jumlah Absolut</button>
@@ -422,17 +422,11 @@ def render_categorical_analysis(df, categorical_cols, k_value, is_demo=False):
 
             <!-- Summary Statistics -->
             <div class="card">
-                <h3 class="section-header">📊 Statistik Summary</h3>
+                <h3 class="section-header">Statistik Summary</h3>
                 <p class="section-subtitle">Distribusi kategori di seluruh cluster</p>
                 <div style="overflow-x: auto;">
                     <table class="summary-table" id="summaryStatsTable"></table>
                 </div>
-            </div>
-
-            <!-- Recommendations -->
-            <div class="card">
-                <h3 class="section-header">💡 Rekomendasi Berdasarkan Profiling</h3>
-                <div id="recommendations"></div>
             </div>
         </div>
 

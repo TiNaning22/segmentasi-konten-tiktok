@@ -9,7 +9,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def perform_clustering(df: pd.DataFrame, n_clusters: int, features_cols: list) -> Optional[Dict[str, Any]]:
+def perform_clustering(df: pd.DataFrame, n_clusters: int, features_cols: list,
+                      use_fast_pca: bool = True, enable_caching: bool = True,
+                      **kwargs) -> Optional[Dict[str, Any]]:
     """
     Perform K-Means clustering dengan error handling komprehensif
     """
@@ -34,33 +36,51 @@ def perform_clustering(df: pd.DataFrame, n_clusters: int, features_cols: list) -
         if len(df) < 10:
             validation_errors.append("Dataset terlalu kecil untuk clustering (minimum 10 baris)")
         
-        # Cek features
+        # Cek features - PERBAIKI INI
         missing_features = [col for col in features_cols if col not in df.columns]
         if missing_features:
             validation_errors.append(f"Feature tidak ditemukan: {missing_features}")
         
-        # Cek tipe data
+        # Cek tipe data - PERBAIKI: gunakan pd.api.types.is_numeric_dtype
         if features_cols:
-            numeric_features = df[features_cols].select_dtypes(include=[np.number]).columns.tolist()
-            non_numeric = [col for col in features_cols if col not in numeric_features]
+            # Filter hanya features yang ada
+            existing_features = [col for col in features_cols if col in df.columns]
+            non_numeric = []
+            
+            for col in existing_features:
+                if not pd.api.types.is_numeric_dtype(df[col]):
+                    non_numeric.append(col)
+            
             if non_numeric:
                 validation_errors.append(f"Feature non-numerik: {non_numeric}")
         
-        # Cek missing values
+        # Cek missing values - PERBAIKI: gunakan .isna() bukan .isnull()
         if features_cols:
-            missing_counts = df[features_cols].isnull().sum()
-            total_missing = missing_counts.sum()
-            if total_missing > 0:
-                missing_pct = (total_missing / (len(df) * len(features_cols))) * 100
-                if missing_pct > 30:
-                    validation_errors.append(f"Missing values terlalu tinggi ({missing_pct:.1f}%)")
+            # Filter hanya features yang ada
+            existing_features = [col for col in features_cols if col in df.columns]
+            if existing_features:
+                missing_counts = df[existing_features].isna().sum()
+                total_missing = missing_counts.sum()
+                if total_missing > 0:
+                    missing_pct = (total_missing / (len(df) * len(existing_features))) * 100
+                    if missing_pct > 30:
+                        validation_errors.append(f"Missing values terlalu tinggi ({missing_pct:.1f}%)")
         
-        # Cek zero variance
+        # Cek zero variance - PERBAIKI: gunakan .var() dengan ddof=0
         if features_cols and len(df) > 1:
-            variances = df[features_cols].var()
-            zero_var_features = variances[variances == 0].index.tolist()
-            if zero_var_features:
-                validation_errors.append(f"Feature zero variance: {zero_var_features}")
+            existing_features = [col for col in features_cols if col in df.columns]
+            if existing_features:
+                variances = df[existing_features].var(ddof=0)
+                # Gunakan .tolist() untuk menghindari array boolean
+                zero_var_mask = variances == 0
+                if isinstance(zero_var_mask, pd.Series):
+                    zero_var_features = zero_var_mask[zero_var_mask].index.tolist()
+                else:
+                    # Jika variances adalah scalar
+                    zero_var_features = [] if variances != 0 else existing_features
+                
+                if zero_var_features:
+                    validation_errors.append(f"Feature zero variance: {zero_var_features}")
         
         if validation_errors:
             error_msg = " | ".join(validation_errors)

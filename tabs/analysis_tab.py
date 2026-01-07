@@ -4,37 +4,67 @@ import pandas as pd
 import json
 
 def render(df_clustered, result, k_value, features_cols):
-    """Render Analysis tab - Hybrid Streamlit + HTML"""
+    """Render Analysis tab - Hybrid Streamlit + HTML dengan dynamic features"""
     
     # ==================== PREPARE DATA ====================
-    # Get cluster centers
-    centers = result['scaler'].inverse_transform(result['kmeans'].cluster_centers_)
+    # Filter features yang benar-benar ada di dataframe
+    available_features = [col for col in features_cols if col in df_clustered.columns]
     
-    # Convert to list of dicts for JSON
+    if not available_features:
+        st.error("Tidak ada features yang valid untuk analisis")
+        return
+    
+    # Get cluster centers (hanya untuk features yang ada)
     centers_data = []
-    for i in range(k_value):
-        center_dict = {'cluster': i}
-        for j, col in enumerate(features_cols):
-            center_dict[col] = float(centers[i][j])
-        centers_data.append(center_dict)
     
-    # Get raw data for box plots (sample per cluster)
+    if result.get('kmeans') is not None and result.get('scaler') is not None:
+        try:
+            # Hanya inverse transform untuk features yang ada
+            centers = result['scaler'].inverse_transform(result['kmeans'].cluster_centers_)
+            
+            for i in range(k_value):
+                center_dict = {'cluster': i}
+                for j, col in enumerate(available_features):
+                    if j < centers.shape[1]:  # Pastikan index valid
+                        center_dict[col] = float(centers[i][j])
+                centers_data.append(center_dict)
+        except Exception as e:
+            st.warning(f"Tidak dapat mendapatkan cluster centers: {e}")
+            # Fallback ke mean per cluster
+            for cluster_num in range(k_value):
+                cluster_df = df_clustered[df_clustered['Cluster'] == cluster_num]
+                center_dict = {'cluster': cluster_num}
+                for col in available_features:
+                    center_dict[col] = float(cluster_df[col].mean())
+                centers_data.append(center_dict)
+    else:
+        # Fallback ke mean per cluster
+        for cluster_num in range(k_value):
+            cluster_df = df_clustered[df_clustered['Cluster'] == cluster_num]
+            center_dict = {'cluster': cluster_num}
+            for col in available_features:
+                center_dict[col] = float(cluster_df[col].mean())
+            centers_data.append(center_dict)
+    
+    # Get raw data untuk box plots (sample per cluster)
     raw_data = {}
+    max_samples_per_cluster = 100  # Kurangi untuk performa
+    
     for cluster_num in range(k_value):
         cluster_df = df_clustered[df_clustered['Cluster'] == cluster_num]
         
-        # Sample max 100 points per cluster untuk performa
-        if len(cluster_df) > 100:
-            cluster_df = cluster_df.sample(n=100, random_state=42)
+        # Sample untuk performa
+        if len(cluster_df) > max_samples_per_cluster:
+            cluster_df = cluster_df.sample(n=max_samples_per_cluster, random_state=42)
         
         raw_data[f'cluster_{cluster_num}'] = {}
-        for col in features_cols:
+        for col in features_cols[:8]:  # Batasi max 8 features untuk performance
             raw_data[f'cluster_{cluster_num}'][col] = cluster_df[col].tolist()
     
     # Convert to JSON
     centers_json = json.dumps(centers_data)
     raw_data_json = json.dumps(raw_data)
-    features_json = json.dumps(features_cols)
+    features_json = json.dumps(features_cols[:8])
     
     # ==================== HTML COMPONENT ====================
     html_content = f"""
@@ -178,7 +208,7 @@ def render(df_clustered, result, k_value, features_cols):
         <div class="container">
             <!-- Header Card -->
             <div class="card">
-                <h3>📈 Analisis Mendalam</h3>
+                <h3>Analisis Mendalam</h3>
             </div>
 
             <!-- Main Content -->

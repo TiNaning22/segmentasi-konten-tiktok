@@ -37,7 +37,7 @@ from tabs import (
 # ==================== KONFIGURASI ====================
 st.set_page_config(
     page_title="TikTok Content Segmenter",
-    page_icon="📊",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -67,330 +67,286 @@ def main_dashboard():
     </div>
     """, unsafe_allow_html=True)
     
-    # ==================== KONTROL & INFO ====================
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class='custom-card'>
-            <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
-                Kontrol Clustering
-            </h3>
-        </div>
-        """, unsafe_allow_html=True)
+    try:
+        # ==================== KONTROL & INFO ====================
+        col1, col2 = st.columns([1, 1])
         
-        # Get suggestions for optimal K
-        df_loaded = False
-        try:
-            df = load_data()
-            df_loaded = True
-            features_cols = ['Likes', 'Shares', 'Comments', 'Views', 'TimeSpentOnContent', 'Engagement_Rate']
-            suggestions = suggest_optimal_clusters(df, features_cols)
-        except:
+        with col1:
+            st.markdown("""
+            <div class='custom-card'>
+                <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
+                    Kontrol Clustering
+                </h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Load data untuk mendapatkan available features
             df_loaded = False
-            suggestions = {'recommended': 4, 'recommended_range': '2-5'}
-        
-        # K value slider with suggestions - MAX VALUE CHANGED TO 5
-        default_k = min(suggestions.get('recommended', 4), 5)  # Ensure default doesn't exceed max
-        
-        k_value = st.slider(
-            "Jumlah Cluster (K):",
-            min_value=2,
-            max_value=5,  # Changed from 10 to 5
-            value=default_k,
-            help=f"Disarankan: {suggestions.get('recommended_range', '2-5')}. K={default_k} berdasarkan data"
-        )
-        
-        # Show suggestions
-        if suggestions.get('warnings'):
-            with st.expander("Saran & Peringatan"):
-                for warning in suggestions['warnings']:
-                    st.warning(warning)
+            try:
+                df = load_data()
+                df_loaded = True
                 
-                if suggestions.get('recommended_range'):
-                    st.info(f"Range yang disarankan: {suggestions['recommended_range']}")
-    
-    with col2:
-        if not df_loaded:
-            st.error("Tidak dapat memuat data. Cek file dataset.")
-            st.stop()
+                # Deteksi kolom numerik yang tersedia
+                numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                default_features = ['Likes', 'Shares', 'Comments', 'Views', 
+                                   'TimeSpentOnContent', 'Engagement_Rate']
+                
+                # Filter hanya yang ada di dataset
+                available_features = [col for col in default_features if col in df.columns and col in numeric_cols]
+                
+                # Tambahkan kolom numerik lainnya
+                additional_numeric = [col for col in numeric_cols 
+                                     if col not in available_features 
+                                     and col != 'Cluster'
+                                     and pd.api.types.is_numeric_dtype(df[col])]
+                
+                all_possible_features = available_features + additional_numeric[:10]
+                
+            except Exception as e:
+                logger.error(f"Error loading data: {str(e)}")
+                df_loaded = False
+                all_possible_features = ['Likes', 'Shares', 'Comments', 'Views', 
+                                        'TimeSpentOnContent', 'Engagement_Rate']
+                default_features = all_possible_features
+            
+            # FEATURE SELECTION MULTI-SELECT
+            st.markdown("**Pilih Features untuk Clustering:**")
+            selected_features = st.multiselect(
+                "Features:",
+                options=all_possible_features,
+                default=default_features[:4] if len(default_features) >= 4 else default_features,
+                help="Pilih minimal 2 features untuk clustering"
+            )
+            
+            # Validasi features yang dipilih
+            valid_features = []
+            if df_loaded:
+                for feature in selected_features:
+                    if feature in df.columns:
+                        if pd.api.types.is_numeric_dtype(df[feature]):
+                            valid_features.append(feature)
+                        else:
+                            st.warning(f"Feature '{feature}' bukan numerik, diabaikan")
+                    else:
+                        st.warning(f"Feature '{feature}' tidak ditemukan, diabaikan")
+            else:
+                valid_features = selected_features
+            
+            # Pastikan minimal 2 features valid
+            if len(valid_features) < 2:
+                st.error(f"Hanya {len(valid_features)} features valid. Pilih minimal 2 features numerik.")
+                if df_loaded:
+                    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                    st.info(f"Features numerik yang tersedia: {', '.join(numeric_cols[:10])}{'...' if len(numeric_cols) > 10 else ''}")
+                st.stop()
+            
+            features_cols = valid_features
+            
+            # K value slider
+            if df_loaded:
+                suggestions = suggest_optimal_clusters(df, features_cols)
+            else:
+                suggestions = {'recommended': 4, 'recommended_range': '2-5'}
+            
+            default_k = min(suggestions.get('recommended', 4), 5)
+            
+            k_value = st.slider(
+                "Jumlah Cluster (K):",
+                min_value=2,
+                max_value=5,
+                value=default_k,
+                help=f"Disarankan: {suggestions.get('recommended_range', '2-5')}. K={default_k} berdasarkan data"
+            )
         
-        df = load_data()
-        features_cols = ['Likes', 'Shares', 'Comments', 'Views', 'TimeSpentOnContent', 'Engagement_Rate']
-        
-        missing_values = df[features_cols].isnull().sum().sum()
-        
-        st.markdown(f"""
-        <div class='custom-card'>
-            <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
-                Dataset Information
-            </h3>
-            <div class='info-grid'>
-                <div class='info-item'>
-                    <p class='info-label'>Total Konten</p>
-                    <p class='info-value'>{len(df):,}</p>
+        with col2:
+            if not df_loaded:
+                st.error("Tidak dapat memuat data. Cek file dataset.")
+                st.stop()
+            
+            df = load_data()
+            
+            missing_values = df[features_cols].isna().sum().sum()
+            
+            st.markdown(f"""
+            <div class='custom-card'>
+                <h3 style='color: #1E293B; margin: 0 0 1rem 0;'>
+                    Dataset Information
+                </h3>
+                <div class='info-grid'>
+                    <div class='info-item'>
+                        <p class='info-label'>Total Konten</p>
+                        <p class='info-value'>{len(df):,}</p>
+                    </div>
+                    <div class='info-item'>
+                        <p class='info-label'>Features Selected</p>
+                        <p class='info-value'>{len(features_cols)}</p>
+                    </div>
+                    <div class='info-item'>
+                        <p class='info-label'>Missing Values</p>
+                        <p class='info-value {'success' if missing_values == 0 else 'warning' if missing_values < 10 else 'error'}">
+                            {missing_values}
+                        </p>
+                    </div>
+                    <div class='info-item'>
+                        <p class='info-label'>Data Size</p>
+                        <p class='info-value {'success' if len(df) <= 10000 else 'warning' if len(df) <= 50000 else 'error'}">
+                            {'Small' if len(df) <= 10000 else 'Medium' if len(df) <= 50000 else 'Large'}
+                        </p>
+                    </div>
                 </div>
-                <div class='info-item'>
-                    <p class='info-label'>Features</p>
-                    <p class='info-value'>{len(features_cols)}</p>
-                </div>
-                <div class='info-item'>
-                    <p class='info-label'>Missing Values</p>
-                    <p class='info-value {'success' if missing_values == 0 else 'warning' if missing_values < 10 else 'error'}">
-                        {missing_values}
-                    </p>
-                </div>
-                <div class='info-item'>
-                    <p class='info-label'>Engagement Rate</p>
-                    <p class='info-value success'>Aktif</p>
+                <div style='margin-top: 1rem; font-size: 0.85rem; color: #FFFFFF;'>
+                    <strong>Features:</strong> {', '.join(features_cols[:5])}{'...' if len(features_cols) > 5 else ''}
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Quick data validation
-        is_valid, validation_msg, validation_warnings = validate_data_for_clustering(df, features_cols)
-        
-        if not is_valid:
-            st.error(validation_msg)
-        else:
-            if validation_warnings:
-                with st.expander("Validation Warnings", expanded=False):
-                    for warning in validation_warnings[:3]:
-                        st.warning(warning)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # ==================== CLUSTERING DENGAN ERROR HANDLING ====================
-    with st.spinner("Melakukan clustering..."):
-        progress_bar = st.progress(0)
-        
-        try:
-            # Update progress
-            progress_bar.progress(20)
+            """, unsafe_allow_html=True)
             
-            # Validasi data sebelum clustering
+            # Quick data validation
             is_valid, validation_msg, validation_warnings = validate_data_for_clustering(df, features_cols)
             
             if not is_valid:
-                progress_bar.progress(100)
-                st.error(f"{validation_msg}")
-                
-                with st.expander("Tips perbaikan data"):
-                    st.markdown("""
-                    1. **Cek missing values**: Pastikan tidak ada kolom dengan >50% missing
-                    2. **Cek tipe data**: Semua feature harus numerik
-                    3. **Cek variance**: Pastikan features memiliki variasi data
-                    4. **Cek outliers**: Outlier ekstrem dapat mempengaruhi clustering
-                    5. **Minimum data**: Minimal 10 data points untuk clustering
-                    """)
-                
-                # Suggest optimal clusters
-                suggestions = suggest_optimal_clusters(df, features_cols)
-                recommended_k = min(suggestions.get('recommended', 4), 5)  # Cap at 5
-                st.info(f"Saran: Untuk {len(df):,} data, coba K={recommended_k}")
-                
+                st.error(validation_msg)
                 st.stop()
+            else:
+                if validation_warnings:
+                    with st.expander("Validation Warnings", expanded=False):
+                        for warning in validation_warnings[:3]:
+                            st.warning(warning)
+        
+        # ==================== CLUSTERING ====================
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        with st.spinner("Melakukan clustering..."):
+            progress_bar = st.progress(0)
             
-            progress_bar.progress(40)
-            
-            # Tampilkan info validasi
-            if validation_warnings:
-                st.warning(f"{len(validation_warnings)} warnings ditemukan. Clustering tetap dilanjutkan.")
-            
-            progress_bar.progress(60)
-            
-            # Lakukan clustering
-            result = perform_clustering(df, k_value, features_cols)
-            
-            progress_bar.progress(80)
-            
-            # Cek jika clustering menghasilkan error
-            if result and not result.get('success', True):
-                st.error(f"Error dalam clustering: {result.get('error', 'Unknown error')}")
+            try:
+                progress_bar.progress(20)
                 
-                # Fallback: coba dengan K yang lebih kecil
-                if k_value > 2:
-                    st.warning(f"Mencoba clustering dengan K={k_value-1}...")
-                    result = perform_clustering(df, k_value-1, features_cols)
-                    
-                    if not result.get('success', True):
-                        st.error("Clustering tetap gagal. Silakan cek data Anda.")
-                        st.stop()
-                    else:
-                        st.success(f"Clustering berhasil dengan K={k_value-1}")
-                        k_value = k_value - 1  # Update K value
-                else:
-                    st.error("Tidak dapat melakukan clustering. Cek data dan coba lagi.")
+                # Validasi data
+                is_valid, validation_msg, validation_warnings = validate_data_for_clustering(df, features_cols)
+                
+                if not is_valid:
+                    progress_bar.progress(100)
+                    st.error(validation_msg)
                     st.stop()
-            
-            progress_bar.progress(100)
-            
-        except Exception as e:
-            progress_bar.progress(100)
-            logger.error(f"Exception tidak terduga: {str(e)}", exc_info=True)
-            st.error(f"Exception tidak terduga: {str(e)}")
-            
-            # Fallback: buat cluster dummy untuk menjaga aplikasi tetap berjalan
-            st.warning("Membuat cluster dummy untuk melanjutkan...")
-            result = {
-                'clusters': np.random.randint(0, k_value, size=len(df)),
-                'metrics': {
-                    'silhouette': 0.1,
-                    'davies_bouldin': 5.0,
-                    'inertia': 0,
-                    'cluster_sizes': np.ones(k_value) * (len(df) // k_value),
-                    'cluster_balance': 0.5
-                },
-                'pca_result': np.random.randn(len(df), 2),
-                'pca_explained': [0.5, 0.3],
-                'success': False,
-                'fallback': True,
-                'error': str(e)
-            }
-    
-    # ==================== PREPARE CLUSTERED DATA ====================
-    df_clustered = df.copy()
-    df_clustered['Cluster'] = result['clusters']
-    
-    # ==================== DIAGNOSTICS ====================
-    # display_clustering_diagnostics(df, result, features_cols)
-    
-    # ==================== METRICS DENGAN ERROR INDICATOR ====================
-    st.markdown("""
-    <div class='custom-card'>
-        <h3 style='color: #1E293B; margin: 0 0 1.5rem 0;'>
-            Model Performance Metrics
-        </h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Tampilkan indicator jika ada error atau fallback
-    if result.get('fallback', False):
-        st.warning("Menggunakan hasil fallback clustering. Metrics mungkin tidak akurat.")
-    
-    if result.get('error'):
-        st.error(f"Clustering memiliki masalah: {result.get('error', 'Unknown error')}")
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    with col1:
-        delta_text = "Fallback" if result.get('fallback') else "Normal"
-        delta_color = "off" if result.get('fallback') else "normal"
-        st.metric("Jumlah Cluster", k_value, 
-                 delta=delta_text,
-                 delta_color=delta_color,
-                 help="Jumlah kelompok yang dibuat")
-    
-    with col2:
-        silhouette = result['metrics']['silhouette']
-        if silhouette < 0:  # Error value
-            st.metric("Silhouette Score", "ERROR", 
-                     delta="Check Data", 
-                     delta_color="off",
-                     help="Tidak dapat dihitung")
-        else:
-            if silhouette > 0.7:
-                quality = "Excellent"
-                delta_color = "normal"
-            elif silhouette > 0.5:
-                quality = "Good"
-                delta_color = "normal"
-            elif silhouette > 0.3:
-                quality = "Fair"
-                delta_color = "off"
-            else:
-                quality = "Poor"
-                delta_color = "off"
                 
-            st.metric("Silhouette Score", f"{silhouette:.3f}", 
-                     delta=quality, 
-                     delta_color=delta_color,
-                     help="Semakin tinggi semakin baik (range: -1 to 1)")
-    
-    with col3:
-        db_score = result['metrics']['davies_bouldin']
-        if db_score == float('inf'):
-            st.metric("Davies-Bouldin", "ERROR", 
-                     delta="Check Data",
-                     delta_color="off",
-                     help="Tidak dapat dihitung")
-        else:
-            if db_score < 1:
-                quality = "Excellent"
-                delta_color = "normal"
-            elif db_score < 2:
-                quality = "Good"
-                delta_color = "normal"
-            elif db_score < 3:
-                quality = "Fair"
-                delta_color = "off"
-            else:
-                quality = "Poor"
-                delta_color = "off"
+                progress_bar.progress(40)
                 
-            st.metric("Davies-Bouldin", f"{db_score:.2f}", 
-                     delta=quality, 
-                     delta_color=delta_color,
-                     help="Semakin rendah semakin baik")
+                # Lakukan clustering
+                result = perform_clustering(df, k_value, features_cols)
+                
+                progress_bar.progress(80)
+                
+                if result and not result.get('success', True):
+                    st.error(f"Error dalam clustering: {result.get('error', 'Unknown error')}")
+                    
+                    if k_value > 2:
+                        st.warning(f"Mencoba clustering dengan K={k_value-1}...")
+                        result = perform_clustering(df, k_value-1, features_cols)
+                        
+                        if not result.get('success', True):
+                            st.error("Clustering tetap gagal. Silakan cek data Anda.")
+                            st.stop()
+                        else:
+                            st.success(f"Clustering berhasil dengan K={k_value-1}")
+                            k_value = k_value - 1
+                    else:
+                        st.error("Tidak dapat melakukan clustering. Cek data dan coba lagi.")
+                        st.stop()
+                
+                progress_bar.progress(100)
+                
+            except Exception as e:
+                progress_bar.progress(100)
+                logger.error(f"Exception tidak terduga: {str(e)}", exc_info=True)
+                st.error(f"Exception tidak terduga: {str(e)}")
+                
+                # Fallback sederhana
+                st.warning("Membuat cluster dummy untuk melanjutkan...")
+                result = {
+                    'clusters': np.random.randint(0, k_value, size=len(df)),
+                    'metrics': {
+                        'silhouette': 0.1,
+                        'davies_bouldin': 5.0,
+                        'inertia': 0,
+                        'cluster_sizes': np.ones(k_value) * (len(df) // k_value),
+                        'cluster_balance': 0.5
+                    },
+                    'pca_result': np.random.randn(len(df), 2),
+                    'pca_explained': [0.5, 0.3],
+                    'success': False,
+                    'fallback': True,
+                    'error': str(e)
+                }
+        
+        # ==================== PREPARE CLUSTERED DATA ====================
+        df_clustered = df.copy()
+        df_clustered['Cluster'] = result['clusters']
+        
+        # ==================== TABS ====================
+        st.session_state['df_clustered'] = df_clustered
+        st.session_state['result'] = result
+        st.session_state['k_value'] = k_value
+        st.session_state['features_cols'] = features_cols
+        
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "Overview", 
+            "Visualisasi", 
+            "Profiling Kategorikal",
+            "Analisis"
+        ])
+        
+        with tab1:
+            overview_tab.render(df_clustered, result, k_value, features_cols)
+        
+        with tab2:
+            visualization_tab.render(df_clustered, result, k_value, features_cols)
+        
+        with tab3:
+            categorical_tab.render(df_clustered, result, k_value, features_cols)
+        
+        with tab4:
+            analysis_tab.render(df_clustered, result, k_value, features_cols)
     
-    with col4:
-        inertia = result['metrics']['inertia']
-        if inertia == 0:
-            st.metric("Inertia", "N/A", 
-                     delta="Not calculated",
-                     delta_color="off",
-                     help="Sum of squared distances")
-        else:
-            st.metric("Inertia", f"{inertia:,.0f}", 
-                     help="Sum of squared distances")
-    
-    with col5:
-        if 'cluster_balance' in result['metrics']:
-            balance = result['metrics']['cluster_balance']
-            if balance == 0:
-                st.metric("Cluster Balance", "N/A",
-                         delta="Not calculated",
-                         delta_color="off")
-            else:
-                balance_quality = "Balanced" if balance < 0.5 else "Unbalanced"
-                delta_color = "normal" if balance < 0.5 else "off"
-                st.metric("Cluster Balance", balance_quality, 
-                         delta=f"σ/μ: {balance:.2f}", 
-                         delta_color=delta_color)
-        else:
-            st.metric("Cluster Balance", "N/A",
-                     delta="Not available",
-                     delta_color="off")
-    
-    # ==================== TABS ====================
-    st.session_state['df_clustered'] = df_clustered
-    st.session_state['result'] = result
-    st.session_state['k_value'] = k_value
-    st.session_state['features_cols'] = features_cols
-    
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Overview", 
-        "Visualisasi", 
-        # "Data & Profil",
-        "Profiling Kategorikal",
-        "Analisis"
-    ])
-    
-    with tab1:
-        overview_tab.render(df_clustered, result, k_value, features_cols)
-    
-    with tab2:
-        visualization_tab.render(df_clustered, result, k_value, features_cols)
-    
-    # with tab3:
-    #     data_tab.render(df_clustered, result, k_value, features_cols)
-
-    with tab3:
-        categorical_tab.render(df_clustered, result, k_value, features_cols)
-    
-    with tab4:
-        analysis_tab.render(df_clustered, result, k_value, features_cols)
+    except Exception as e:
+        logger.critical(f"Critical error in main_dashboard: {str(e)}", exc_info=True)
+        st.error(f"""
+        ## Critical Error
+        
+        **Error:** {str(e)}
+        
+        **Langkah troubleshooting:**
+        1. Cek file log: tiktok_dashboard.log
+        2. Pastikan dataset ada dan formatnya benar
+        3. Kurangi jumlah features yang dipilih
+        4. Restart aplikasi
+        
+        **Tips cepat:**
+        - Pilih hanya 2-3 features untuk testing
+        - Coba dataset demo dengan tombol di bawah
+        """)
+        
+        if st.button("Generate Dataset Demo"):
+            np.random.seed(42)
+            n_samples = 1000
+            demo_data = pd.DataFrame({
+                'Likes': np.random.randint(100, 10000, n_samples),
+                'Shares': np.random.randint(10, 1000, n_samples),
+                'Comments': np.random.randint(5, 500, n_samples),
+                'Views': np.random.randint(1000, 100000, n_samples),
+                'TimeSpentOnContent': np.random.uniform(10, 300, n_samples),
+                'ContentType': np.random.choice(['Video', 'Image', 'Text'], n_samples),
+                'AgeGroup': np.random.choice(['18-24', '25-34', '35-44'], n_samples),
+                'Location': np.random.choice(['Jakarta', 'Surabaya', 'Bandung', 'Medan'], n_samples)
+            })
+            
+            demo_data['Engagement_Rate'] = (
+                (demo_data['Likes'] + demo_data['Comments'] + demo_data['Shares']) / 
+                demo_data['Views'].clip(lower=1)
+            )
+            
+            demo_data.to_csv('tiktok_demo_data.csv', index=False)
+            st.success("Data demo berhasil dibuat. Silakan refresh halaman.")
+            st.stop()
     
     # ==================== FOOTER ====================
     st.markdown("""

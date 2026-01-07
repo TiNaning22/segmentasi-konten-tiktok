@@ -4,6 +4,46 @@ def load_css():
     """Load custom CSS styles"""
     st.markdown("""
     <style>
+                
+    div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #1E293B !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+
+    /* Input area */
+    div[data-baseweb="select"] input {
+        background-color: #ffffff !important;
+        color: #1E293B !important;
+    }
+
+    /* Dropdown menu */
+    div[data-baseweb="popover"] {
+        background-color: #ffffff !important;
+    }
+
+    /* Item dropdown */
+    div[data-baseweb="menu"] {
+        background-color: #ffffff !important;
+    }
+
+    /* Option item */
+    div[data-baseweb="option"] {
+        background-color: #ffffff !important;
+        color: #1E293B !important;
+    }
+
+    /* Hover option */
+    div[data-baseweb="option"]:hover {
+        background-color: #E2E8F0 !important;
+    }
+
+    /* Selected tags */
+    span[data-baseweb="tag"] {
+        background-color: #F1F5F9 !important;
+        color: #1E293B !important;
+        border-radius: 6px;
+    }
     /* ===== GLOBAL STYLES ===== */
     .stApp {
         background-color: #F3F7FF;

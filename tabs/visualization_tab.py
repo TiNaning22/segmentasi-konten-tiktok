@@ -45,7 +45,7 @@ def render(df_clustered, result, k_value, features_cols):
     with col1:
         st.markdown("""
         <div class="custom-card">
-            <div class="card-title">📊 Visualisasi 2D Cluster (PCA)</div>
+            <div class="card-title">Visualisasi 2D Cluster (PCA)</div>
         """, unsafe_allow_html=True)
 
         # ----- DATA PREPARATION (TIDAK DIUBAH) -----
@@ -104,7 +104,7 @@ def render(df_clustered, result, k_value, features_cols):
     with col2:
         st.markdown("""
         <div class="custom-card">
-            <div class="card-title">⚡ Quick Stats</div>
+            <div class="card-title">Quick Stats</div>
             <div class="card-text"><b>Varian per Cluster</b></div>
         """, unsafe_allow_html=True)
 

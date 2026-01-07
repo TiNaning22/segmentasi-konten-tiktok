@@ -3,13 +3,6 @@ import numpy as np
 from typing import Tuple, List, Dict
 
 def validate_data_for_clustering(df: pd.DataFrame, features_cols: list) -> Tuple[bool, str, List[str]]:
-    """
-    Validasi dataset untuk clustering
-    
-    Returns:
-    --------
-    Tuple[bool, str, List[str]]: (is_valid, message, warnings)
-    """
     
     warnings = []
     
@@ -26,57 +19,82 @@ def validate_data_for_clustering(df: pd.DataFrame, features_cols: list) -> Tuple
     if missing:
         return False, f"❌ Kolom tidak ditemukan: {missing}", []
     
-    # 4. Cek tipe data numerik
-    numeric_cols = df[features_cols].select_dtypes(include=[np.number]).columns
-    non_numeric = [col for col in features_cols if col not in numeric_cols]
+    # 4. Cek tipe data numerik dengan cara yang aman
+    non_numeric = []
+    for col in features_cols:
+        if col in df.columns:
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                non_numeric.append(col)
+    
     if non_numeric:
         return False, f"❌ Kolom non-numerik: {non_numeric}", []
     
     # 5. Cek missing values percentage
-    missing_pct = (df[features_cols].isnull().sum().sum() / 
-                  (len(df) * len(features_cols))) * 100
-    if missing_pct > 50:
-        return False, f"❌ Missing values terlalu tinggi ({missing_pct:.1f}%)", []
-    elif missing_pct > 10:
-        warnings.append(f"Missing values: {missing_pct:.1f}%")
+    # Gunakan hanya features yang ada
+    existing_features = [col for col in features_cols if col in df.columns]
+    if existing_features:
+        missing_pct = (df[existing_features].isna().sum().sum() / 
+                      (len(df) * len(existing_features))) * 100
+        if missing_pct > 50:
+            return False, f"❌ Missing values terlalu tinggi ({missing_pct:.1f}%)", []
+        elif missing_pct > 10:
+            warnings.append(f"Missing values: {missing_pct:.1f}%")
     
-    # 6. Cek zero variance
-    variances = df[features_cols].var()
-    zero_var = variances[variances == 0].index.tolist()
-    if len(zero_var) == len(features_cols):
-        return False, "❌ Semua features memiliki zero variance", []
-    elif zero_var:
-        warnings.append(f"Zero variance features: {zero_var}")
+    # 6. Cek zero variance dengan cara yang aman
+    if existing_features and len(df) > 1:
+        variances = df[existing_features].var(ddof=0)
+        # Handle kasus variances adalah Series atau scalar
+        if isinstance(variances, pd.Series):
+            zero_var_features = variances[variances == 0].index.tolist()
+        else:
+            # Jika hanya satu feature, variances adalah scalar
+            zero_var_features = existing_features if variances == 0 else []
+        
+        if len(zero_var_features) == len(existing_features):
+            return False, "❌ Semua features memiliki zero variance", []
+        elif zero_var_features:
+            warnings.append(f"Zero variance features: {zero_var_features}")
     
     # 7. Cek outliers ekstrem (optional warning)
     extreme_outlier_cols = []
-    for col in features_cols:
-        if col in df.columns:
-            q1 = df[col].quantile(0.25)
-            q3 = df[col].quantile(0.75)
-            iqr = q3 - q1
-            if iqr > 0:
-                lower_bound = q1 - 10 * iqr
-                upper_bound = q3 + 10 * iqr
-                extreme_outliers = ((df[col] < lower_bound) | (df[col] > upper_bound)).sum()
-                if extreme_outliers > 0:
-                    extreme_outlier_cols.append(f"{col}: {extreme_outliers}")
+    for col in existing_features:
+        if col in df.columns and pd.api.types.is_numeric_dtype(df[col]):
+            # Pastikan kita punya cukup data
+            if len(df[col].dropna()) > 1:
+                q1 = df[col].quantile(0.25)
+                q3 = df[col].quantile(0.75)
+                iqr = q3 - q1
+                if iqr > 0:  # Hindari division by zero
+                    lower_bound = q1 - 10 * iqr
+                    upper_bound = q3 + 10 * iqr
+                    
+                    # Gunakan .any() untuk array boolean
+                    extreme_outliers = ((df[col] < lower_bound) | (df[col] > upper_bound)).any()
+                    if extreme_outliers:
+                        extreme_outlier_cols.append(f"{col}: outliers detected")
     
     if extreme_outlier_cols:
-        warnings.append(f"Extreme outliers detected in: {', '.join(extreme_outlier_cols)}")
+        warnings.append(f"Extreme outliers detected in: {', '.join(extreme_outlier_cols[:3])}")
     
     # 8. Cek korelasi sangat tinggi antar features
-    if len(features_cols) > 1:
-        corr_matrix = df[features_cols].corr().abs()
-        np.fill_diagonal(corr_matrix.values, 0)
-        high_corr_pairs = []
-        for i in range(len(features_cols)):
-            for j in range(i+1, len(features_cols)):
-                if corr_matrix.iloc[i, j] > 0.95:
-                    high_corr_pairs.append(f"{features_cols[i]}-{features_cols[j]}: {corr_matrix.iloc[i, j]:.2f}")
-        
-        if high_corr_pairs:
-            warnings.append(f"High correlation (>0.95): {', '.join(high_corr_pairs[:3])}")
+    if len(existing_features) > 1:
+        # Gunakan hanya data numerik
+        numeric_df = df[existing_features].select_dtypes(include=[np.number])
+        if len(numeric_df.columns) > 1:
+            corr_matrix = numeric_df.corr().abs()
+            np.fill_diagonal(corr_matrix.values, 0)
+            
+            high_corr_pairs = []
+            features = corr_matrix.columns.tolist()
+            
+            for i in range(len(features)):
+                for j in range(i+1, len(features)):
+                    corr_value = corr_matrix.iloc[i, j]
+                    if corr_value > 0.95:
+                        high_corr_pairs.append(f"{features[i]}-{features[j]}: {corr_value:.2f}")
+            
+            if high_corr_pairs:
+                warnings.append(f"High correlation (>0.95): {', '.join(high_corr_pairs[:3])}")
     
     message = "✅ Data valid untuk clustering"
     if warnings:

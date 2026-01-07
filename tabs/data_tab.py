@@ -389,7 +389,7 @@ def render(df_clustered, result, k_value, features_cols):
                 <div>
                     <div class="card">
                         <div class="card-header">
-                            <h3>📊 Data dengan Label Cluster</h3>
+                            <h3>Data dengan Label Cluster</h3>
                         </div>
 
                         <!-- Filter Section -->
